@@ -6,8 +6,10 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Size
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,9 +32,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var usbView: AspectSurfaceView
     private lateinit var tvStatus: TextView
     private lateinit var tvResult: TextView
-    private lateinit var etHeight: EditText
-    private lateinit var etWeight: EditText
     private lateinit var etMemo: EditText
+    private lateinit var spGrade: Spinner
+    private lateinit var etClass: EditText
     private lateinit var btnSwitch: Button
     private lateinit var usb: UsbCameraSource
 
@@ -57,32 +59,27 @@ class MainActivity : AppCompatActivity() {
         usbView = findViewById(R.id.usbView)
         tvStatus = findViewById(R.id.tvStatus)
         tvResult = findViewById(R.id.tvResult)
-        etHeight = findViewById(R.id.etHeight)
-        etWeight = findViewById(R.id.etWeight)
         etMemo = findViewById(R.id.etMemo)
+        spGrade = findViewById(R.id.spGrade)
+        etClass = findViewById(R.id.etClass)
+        spGrade.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item,
+            (1..6).map { "${it}학년" }
+        )
         btnSwitch = findViewById(R.id.btnSwitch)
         usb = UsbCameraSource(usbView, analyzer) { tvStatus.text = it }
 
         val prefs = getSharedPreferences("jump", MODE_PRIVATE)
-        prefs.getString("height", null)?.let { etHeight.setText(it) }
-        prefs.getString("weight", null)?.let { etWeight.setText(it) }
+        spGrade.setSelection(prefs.getInt("grade", 1) - 1)
+        prefs.getInt("class", 0).takeIf { it > 0 }?.let { etClass.setText(it.toString()) }
         source = runCatching { Source.valueOf(prefs.getString("source", "USB")!!) }
             .getOrDefault(Source.USB)
         btnSwitch.text = "입력: ${source.label}"
 
         findViewById<Button>(R.id.btnStart).setOnClickListener {
-            val h = etHeight.text.toString().toDoubleOrNull()
-            if (h == null || h < 100 || h > 230) {
-                toast("키를 100~230cm 사이로 입력하세요")
-                return@setOnClickListener
-            }
-            prefs.edit()
-                .putString("height", etHeight.text.toString())
-                .putString("weight", etWeight.text.toString())
-                .apply()
             tvResult.text = ""
             last = null
-            analyzer.start(h)
+            analyzer.start(170.0)   // 키 입력 없이 기본값 사용 (점프 높이는 체공시간으로 계산하므로 영향 없음)
         }
 
         findViewById<Button>(R.id.btnSave).setOnClickListener { saveRecord() }
@@ -128,7 +125,7 @@ class MainActivity : AppCompatActivity() {
             previewView.visibility = View.VISIBLE
             lens = if (source == Source.FRONT) CameraSelector.DEFAULT_FRONT_CAMERA
             else CameraSelector.DEFAULT_BACK_CAMERA
-            tvStatus.text = "키를 입력하고 [측정 시작]을 누르세요"
+            tvStatus.text = "[측정 시작]을 누르세요"
             bindCamera()
         }
     }
@@ -158,34 +155,33 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun power(heightCm: Double, weightKg: Double): Double =
-        if (weightKg > 0) 60.7 * heightCm + 45.3 * weightKg - 2055.0 else 0.0  // Sayers 공식(추정)
-
     private fun showResult(r: JumpResult) {
         last = r
-        val w = etWeight.text.toString().toDoubleOrNull() ?: 0.0
-        val p = power(r.heightFlightCm, w)
-        tvResult.text = buildString {
-            append("점프 높이  %.1f cm\n".format(r.heightFlightCm))
-            append("체공시간  %.3f s\n".format(r.flightSec))
-            append("발목 상승량 기준  %.1f cm".format(r.heightDispCm))
-            if (p > 0) append("\n추정 최대파워  %.0f W".format(p))
-        }
+        tvResult.text = "점프 높이\n%.1f cm".format(r.heightFlightCm)
     }
 
     private fun saveRecord() {
         val r = last ?: return toast("저장할 측정 결과가 없습니다")
-        val h = etHeight.text.toString().toDoubleOrNull() ?: 0.0
-        val w = etWeight.text.toString().toDoubleOrNull() ?: 0.0
+        val classNo = etClass.text.toString().toIntOrNull() ?: 0
+        if (classNo == 0) return toast("반 번호를 적어주세요")
         RecordStore.add(
             this,
             JumpRecord(
                 System.currentTimeMillis(), r.flightSec, r.heightFlightCm, r.heightDispCm,
-                h, w, power(r.heightFlightCm, w),
-                "[${source.label}] " + etMemo.text.toString().trim()
+                0.0, 0.0, 0.0,
+                etMemo.text.toString().trim().ifEmpty { "이름 없음" },
+                spGrade.selectedItemPosition + 1,
+                classNo
             )
         )
+        getSharedPreferences("jump", MODE_PRIVATE).edit()
+            .putInt("grade", spGrade.selectedItemPosition + 1)
+            .putInt("class", classNo).apply()
         toast("기록을 저장했습니다")
+        // 다음 사람을 위해 초기화
+        last = null
+        tvResult.text = ""
+        etMemo.setText("")
     }
 
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
