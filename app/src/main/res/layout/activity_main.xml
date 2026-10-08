@@ -38,7 +38,7 @@
                 android:id="@+id/tvStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="키를 입력하고 [측정 시작]을 누르세요" />
+                android:text="[측정 시작]을 누르세요" />
 
             <TextView
                 android:id="@+id/tvResult"
@@ -46,7 +46,7 @@
                 android:layout_height="wrap_content"
                 android:paddingTop="6dp"
                 android:paddingBottom="6dp"
-                android:textSize="22sp"
+                android:textSize="34sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -54,28 +54,27 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <EditText
-                    android:id="@+id/etHeight"
+                <Spinner
+                    android:id="@+id/spGrade"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:hint="키(cm)"
-                    android:inputType="numberDecimal" />
+                    android:layout_weight="1" />
 
                 <EditText
-                    android:id="@+id/etWeight"
+                    android:id="@+id/etClass"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="몸무게(kg, 선택)"
-                    android:inputType="numberDecimal" />
+                    android:hint="반 번호 (예: 3)"
+                    android:inputType="number"
+                    android:maxLength="2" />
             </LinearLayout>
 
             <EditText
                 android:id="@+id/etMemo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="메모 (이름, 컨디션, 신발 등)" />
+                android:hint="참가자 이름" />
 
             <LinearLayout
                 android:layout_width="match_parent"
