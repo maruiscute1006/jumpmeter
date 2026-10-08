@@ -13,7 +13,9 @@ data class JumpRecord(
     val userHeightCm: Double,
     val weightKg: Double,
     val powerW: Double,
-    val memo: String
+    val memo: String,
+    val grade: Int = 0,
+    val classNo: Int = 0
 )
 
 object RecordStore {
@@ -31,7 +33,7 @@ object RecordStore {
                     o.getLong("time"), o.getDouble("flightSec"),
                     o.getDouble("heightFlightCm"), o.getDouble("heightDispCm"),
                     o.getDouble("userHeightCm"), o.getDouble("weightKg"),
-                    o.getDouble("powerW"), o.getString("memo")
+                    o.getDouble("powerW"), o.getString("memo"), o.optInt("grade", 0), o.optInt("classNo", 0)
                 )
             )
         }
@@ -45,7 +47,7 @@ object RecordStore {
                 put("time", it.time); put("flightSec", it.flightSec)
                 put("heightFlightCm", it.heightFlightCm); put("heightDispCm", it.heightDispCm)
                 put("userHeightCm", it.userHeightCm); put("weightKg", it.weightKg)
-                put("powerW", it.powerW); put("memo", it.memo)
+                put("powerW", it.powerW); put("memo", it.memo); put("grade", it.grade); put("classNo", it.classNo)
             })
         }
         file(c).writeText(arr.toString())
