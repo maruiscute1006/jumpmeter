@@ -55,7 +55,7 @@ class UsbCameraSource(
             }
             attachSurface(h)
             h.setFrameCallback(IFrameCallback { buf -> onFrame(buf) }, UVCCamera.PIXEL_FORMAT_NV21)
-            onStatus("USB 웹캠 연결됨 (${width}x${height}). 키를 입력하고 [측정 시작]을 누르세요")
+            onStatus("USB 웹캠 연결됨 (${width}x${height}). [측정 시작]을 누르세요")
         }
 
         override fun onCameraClose(device: UsbDevice) {
