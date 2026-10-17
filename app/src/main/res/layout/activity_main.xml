@@ -1,3 +1,4 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -65,7 +66,16 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="반 번호 (예: 3)"
+                    android:hint="반 (예: 4)"
+                    android:inputType="number"
+                    android:maxLength="2" />
+
+                <EditText
+                    android:id="@+id/etNo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="번호 (예: 26)"
                     android:inputType="number"
                     android:maxLength="2" />
             </LinearLayout>
