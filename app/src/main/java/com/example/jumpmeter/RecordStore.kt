@@ -1,3 +1,4 @@
+
 package com.example.jumpmeter
 
 import android.content.Context
@@ -15,7 +16,8 @@ data class JumpRecord(
     val powerW: Double,
     val memo: String,
     val grade: Int = 0,
-    val classNo: Int = 0
+    val classNo: Int = 0,
+    val studentNo: Int = 0
 )
 
 object RecordStore {
@@ -33,7 +35,8 @@ object RecordStore {
                     o.getLong("time"), o.getDouble("flightSec"),
                     o.getDouble("heightFlightCm"), o.getDouble("heightDispCm"),
                     o.getDouble("userHeightCm"), o.getDouble("weightKg"),
-                    o.getDouble("powerW"), o.getString("memo"), o.optInt("grade", 0), o.optInt("classNo", 0)
+                    o.getDouble("powerW"), o.getString("memo"),
+                    o.optInt("grade", 0), o.optInt("classNo", 0), o.optInt("studentNo", 0)
                 )
             )
         }
@@ -47,7 +50,8 @@ object RecordStore {
                 put("time", it.time); put("flightSec", it.flightSec)
                 put("heightFlightCm", it.heightFlightCm); put("heightDispCm", it.heightDispCm)
                 put("userHeightCm", it.userHeightCm); put("weightKg", it.weightKg)
-                put("powerW", it.powerW); put("memo", it.memo); put("grade", it.grade); put("classNo", it.classNo)
+                put("powerW", it.powerW); put("memo", it.memo)
+                put("grade", it.grade); put("classNo", it.classNo); put("studentNo", it.studentNo)
             })
         }
         file(c).writeText(arr.toString())
