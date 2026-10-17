@@ -1,3 +1,4 @@
+
 package com.example.jumpmeter
 
 import android.os.Bundle
@@ -68,7 +69,8 @@ class HistoryActivity : AppCompatActivity() {
         val rows = shown.mapIndexed { i, r ->
             val g = if (sel == 6 && r.grade > 0) "${r.grade}학년 " else ""
             val c = if (r.classNo > 0) "${r.classNo}반 " else ""
-            "%d위   %s%s%s   %.1f cm".format(i + 1, g, c, r.memo, r.heightFlightCm)
+            val n = if (r.studentNo > 0) "${r.studentNo}번 " else ""
+            "%d위   %s%s%s%s   %.1f cm".format(i + 1, g, c, n, r.memo, r.heightFlightCm)
         }
         listView.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, rows)
     }
