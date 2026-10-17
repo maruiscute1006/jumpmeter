@@ -1,3 +1,4 @@
+
 package com.example.jumpmeter
 
 import android.Manifest
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etMemo: EditText
     private lateinit var spGrade: Spinner
     private lateinit var etClass: EditText
+    private lateinit var etNo: EditText
     private lateinit var btnSwitch: Button
     private lateinit var usb: UsbCameraSource
 
@@ -62,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         etMemo = findViewById(R.id.etMemo)
         spGrade = findViewById(R.id.spGrade)
         etClass = findViewById(R.id.etClass)
+        etNo = findViewById(R.id.etNo)
         spGrade.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item,
             (1..6).map { "${it}학년" }
@@ -163,7 +166,8 @@ class MainActivity : AppCompatActivity() {
     private fun saveRecord() {
         val r = last ?: return toast("저장할 측정 결과가 없습니다")
         val classNo = etClass.text.toString().toIntOrNull() ?: 0
-        if (classNo == 0) return toast("반 번호를 적어주세요")
+        if (classNo == 0) return toast("반을 적어주세요")
+        val studentNo = etNo.text.toString().toIntOrNull() ?: 0
         RecordStore.add(
             this,
             JumpRecord(
@@ -171,17 +175,19 @@ class MainActivity : AppCompatActivity() {
                 0.0, 0.0, 0.0,
                 etMemo.text.toString().trim().ifEmpty { "이름 없음" },
                 spGrade.selectedItemPosition + 1,
-                classNo
+                classNo,
+                studentNo
             )
         )
         getSharedPreferences("jump", MODE_PRIVATE).edit()
             .putInt("grade", spGrade.selectedItemPosition + 1)
             .putInt("class", classNo).apply()
         toast("기록을 저장했습니다")
-        // 다음 사람을 위해 초기화
+        // 다음 사람을 위해 초기화 (학년과 반은 그대로 둠)
         last = null
         tvResult.text = ""
         etMemo.setText("")
+        etNo.setText("")
     }
 
     private fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()
