@@ -16,7 +16,7 @@ data class JumpResult(
 )
 
 /**
- * 측면(옆모습)에서 전신을 촬영한 영상에서 발목의 세로 위치를 추적해
+ * 무릎~발목(다리)이 보이는 영상에서 발목의 세로 위치를 추적해
  * 이륙/착지 시점을 찾고 점프 높이를 계산한다.
  * ML Kit 콜백은 메인 스레드에서 호출되므로 상태 변수는 메인 스레드에서만 접근한다.
  */
@@ -29,8 +29,8 @@ class JumpAnalyzer(
 
     companion object {
         const val G = 9.81
-        const val TAKEOFF_RATIO = 0.03      // 몸 길이(px)의 3% 이상 올라가면 이륙으로 판단
-        const val BODY_TO_HEIGHT = 0.85     // (코~발목 거리) ≈ 키 × 0.85
+        const val TAKEOFF_RATIO = 0.10      // 정강이(무릎~발목) 길이의 10% 이상 올라가면 이륙으로 판단
+        const val SHIN_TO_HEIGHT = 0.25     // 정강이 길이 ≈ 키 × 0.25
         const val CALIB_MS = 1200.0
     }
 
@@ -123,20 +123,23 @@ class JumpAnalyzer(
 
         val la = pose.getPoseLandmark(PoseLandmark.LEFT_ANKLE)
         val ra = pose.getPoseLandmark(PoseLandmark.RIGHT_ANKLE)
-        val nose = pose.getPoseLandmark(PoseLandmark.NOSE)
-        if (la == null || ra == null || nose == null ||
-            minOf(la.inFrameLikelihood, ra.inFrameLikelihood, nose.inFrameLikelihood) < 0.6f
+        val lk = pose.getPoseLandmark(PoseLandmark.LEFT_KNEE)
+        val rk = pose.getPoseLandmark(PoseLandmark.RIGHT_KNEE)
+        if (la == null || ra == null || lk == null || rk == null ||
+            minOf(la.inFrameLikelihood, ra.inFrameLikelihood,
+                lk.inFrameLikelihood, rk.inFrameLikelihood) < 0.5f
         ) {
             if (phase == Phase.CALIBRATING) {
                 ankleSamples.clear(); bodySamples.clear(); calStartMs = tMs
             }
-            say("머리부터 발까지 전신이 화면에 보이게 해주세요")
+            say("무릎부터 발까지 다리가 화면에 다 보이게 해주세요")
             return
         }
 
         val ankleY = (la.position.y + ra.position.y) / 2.0
-        val bodyPx = ankleY - nose.position.y
-        if (bodyPx < 50) return
+        val kneeY = (lk.position.y + rk.position.y) / 2.0
+        val bodyPx = ankleY - kneeY      // 정강이 길이(px)
+        if (bodyPx < 30) return
 
         when (phase) {
             Phase.CALIBRATING -> {
@@ -145,7 +148,7 @@ class JumpAnalyzer(
                 if (tMs - calStartMs >= CALIB_MS && ankleSamples.size >= 8) {
                     baselineY = median(ankleSamples)
                     bodyRefPx = median(bodySamples)
-                    cmPerPx = BODY_TO_HEIGHT * userHeightCm / bodyRefPx
+                    cmPerPx = SHIN_TO_HEIGHT * userHeightCm / bodyRefPx
                     phase = Phase.READY
                     prevT = tMs; prevRise = 0.0
                     say(if (avgDt > 0) "준비 완료! (분석 %.0f fps) 점프하세요".format(1000.0 / avgDt) else "준비 완료! 점프하세요")
