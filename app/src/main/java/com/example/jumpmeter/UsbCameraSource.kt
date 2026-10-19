@@ -2,6 +2,8 @@ package com.example.jumpmeter
 
 import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbDevice
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.SurfaceHolder
 import com.herohan.uvcapp.CameraHelper
@@ -22,11 +24,22 @@ class UsbCameraSource(
     companion object {
         const val ROTATION = 0          // 웹캠이 옆으로 누워 있으면 90/270으로 변경
         const val TARGET_MIN_WIDTH = 640 // 분석 속도를 위해 640 이상 중 가장 작은 해상도 선택
+
+        // 영상 크기를 못 알아낼 때, 프레임 바이트 수로 크기를 추측하는 목록
+        private val KNOWN_SIZES = listOf(
+            320 to 240, 640 to 360, 640 to 480, 800 to 600, 960 to 540,
+            1024 to 768, 1280 to 720, 1280 to 960, 1600 to 1200, 1920 to 1080
+        )
     }
 
+    private val main = Handler(Looper.getMainLooper())
     private var helper: CameraHelper? = null
-    private var width = 0
-    private var height = 0
+
+    @Volatile private var width = 0
+    @Volatile private var height = 0
+    @Volatile private var frameCount = 0
+    @Volatile private var announced = false
+    @Volatile private var sizeErrorShown = false
 
     private val callback = object : ICameraHelper.StateCallback {
         override fun onAttach(device: UsbDevice) {
@@ -47,15 +60,27 @@ class UsbCameraSource(
             } catch (e: Exception) { /* 기본 해상도 사용 */ }
 
             h.startPreview()
-            val sz = h.previewSize
-            if (sz != null) {
-                width = sz.width
-                height = sz.height
-                view.setAspect(width, height)
-            }
+            frameCount = 0
+            announced = false
+            sizeErrorShown = false
+            try {
+                val sz = h.previewSize
+                if (sz != null) {
+                    width = sz.width
+                    height = sz.height
+                    view.setAspect(width, height)
+                }
+            } catch (e: Exception) { /* 프레임이 오면 크기를 추측함 */ }
             attachSurface(h)
             h.setFrameCallback(IFrameCallback { buf -> onFrame(buf) }, UVCCamera.PIXEL_FORMAT_NV21)
-            onStatus("USB 웹캠 연결됨 (${width}x${height}). [측정 시작]을 누르세요")
+            onStatus("USB 웹캠 연결됨. [측정 시작]을 누르세요")
+
+            // 4초 안에 분석용 프레임이 하나도 안 오면 알려준다
+            main.postDelayed({
+                if (helper != null && frameCount == 0) {
+                    onStatus("웹캠 영상은 보이지만 분석용 프레임이 안 들어와요")
+                }
+            }, 4000)
         }
 
         override fun onCameraClose(device: UsbDevice) {
@@ -98,12 +123,42 @@ class UsbCameraSource(
     }
 
     private fun onFrame(buf: ByteBuffer) {
-        val w = width
-        val h = height
-        val size = w * h * 3 / 2
-        if (w == 0 || analyzer.isBusy()) return
+        frameCount++
         buf.rewind()
-        if (buf.remaining() < size) return
+        val remaining = buf.remaining()
+        var w = width
+        var h = height
+
+        // 크기를 모르거나 프레임이 너무 작으면 크기를 다시 알아낸다
+        if (w == 0 || h == 0 || remaining < w * h * 3 / 2) {
+            try {
+                helper?.previewSize?.let { w = it.width; h = it.height }
+            } catch (e: Exception) {}
+            if (w == 0 || h == 0 || remaining < w * h * 3 / 2) {
+                val guess = KNOWN_SIZES.firstOrNull { it.first * it.second * 3 / 2 == remaining }
+                if (guess != null) {
+                    w = guess.first
+                    h = guess.second
+                } else {
+                    if (!sizeErrorShown) {
+                        sizeErrorShown = true
+                        main.post { onStatus("프레임 크기를 알 수 없어요 ($remaining 바이트)") }
+                    }
+                    return
+                }
+            }
+            width = w
+            height = h
+            main.post { view.setAspect(w, h) }
+        }
+
+        if (!announced) {
+            announced = true
+            main.post { onStatus("웹캠 프레임 수신 시작 (${w}x${h}). [측정 시작]을 누르세요") }
+        }
+
+        if (analyzer.isBusy()) return
+        val size = w * h * 3 / 2
         val t = SystemClock.elapsedRealtimeNanos() / 1_000_000.0
         val bytes = ByteArray(size)
         buf.get(bytes, 0, size)
