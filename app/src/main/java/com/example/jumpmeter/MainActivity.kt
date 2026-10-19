@@ -1,4 +1,3 @@
-
 package com.example.jumpmeter
 
 import android.Manifest
@@ -82,6 +81,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnStart).setOnClickListener {
             tvResult.text = ""
             last = null
+            tvStatus.text = "측정 준비 중… (영상을 기다리는 중)"
             analyzer.start(170.0)   // 키 입력 없이 기본값 사용 (점프 높이는 체공시간으로 계산하므로 영향 없음)
         }
 
